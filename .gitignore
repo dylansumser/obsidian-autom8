@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+test/test-vault/*
+.claude/
+.gemini/
+.mcp.json
+context/
+
+# Obsidian CI config (keep only the essential registry)
+test/ci-config/*
+!test/ci-config/obsidian.json
+test/ci-test-vault/*
+!test/ci-test-vault/.obsidian/

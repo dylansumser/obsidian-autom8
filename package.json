@@ -1,0 +1,37 @@
+{
+  "name": "obsidian-autom8",
+  "version": "1.0.0",
+  "description": "Self-contained Obsidian + MCP server Docker image for agent and automation use",
+  "type": "module",
+  "main": "dist/obsidian-autom8.cjs",
+  "scripts": {
+    "build": "tsc --noEmit && node esbuild.config.js",
+    "dev": "tsx src/index.ts --vault test-vault",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest",
+    "test:ci": "act -W '.github/workflows/ci.yml'",
+    "lint": "eslint src test",
+    "format": "prettier --write src test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "fastify": "^5.8.4",
+    "yaml": "^2.8.3",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "esbuild": "^0.27.7",
+    "eslint": "^9.0.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.2"
+  }
+}
