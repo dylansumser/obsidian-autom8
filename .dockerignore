@@ -1,0 +1,9 @@
+node_modules/
+.git/
+test/
+tests/
+src/**/*.test.ts
+.mcp.json
+.prettierrc
+eslint.config.js
+vitest.config.ts

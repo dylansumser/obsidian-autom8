@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Type check, lint & format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npx prettier --check "src/**/*.ts" "test/**/*.ts"
+
+      - name: Build
+        run: node esbuild.config.js
+
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    needs: check
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: obsidian-autom8:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start Obsidian container
+        run: |
+          docker rm -f obsidian-ci 2>/dev/null || true
+          docker run -d \
+            --name obsidian-ci \
+            --shm-size=1gb \
+            -v "${{ github.workspace }}/test/ci-test-vault:/config/ci-test-vault" \
+            -v "${{ github.workspace }}/test/ci-config:/config/.config/obsidian" \
+            -e OBSIDIAN_VAULT=ci-test-vault \
+            obsidian-autom8:ci
+
+      - name: Bootstrap CLI binary
+        run: |
+          docker exec obsidian-ci mkdir -p /config/.local/bin
+          docker exec obsidian-ci cp /opt/obsidian/obsidian-cli /config/.local/bin/obsidian
+          docker exec obsidian-ci chmod +x /config/.local/bin/obsidian
+
+      - name: Wait for Obsidian IPC socket
+        run: |
+          echo "Waiting for Obsidian to start..."
+          timeout 120 bash -c \
+            'until docker exec obsidian-ci test -S /config/.XDG/.obsidian-cli.sock 2>/dev/null; do sleep 3; done'
+          echo "Obsidian is ready"
+
+      - name: Install obsidian wrapper on runner
+        # Forwards CLI calls from the runner through docker exec into the
+        # container where the live Obsidian IPC socket is available.
+        run: |
+          sudo tee /usr/local/bin/obsidian > /dev/null << 'EOF'
+          #!/usr/bin/env bash
+          exec docker exec obsidian-ci /config/.local/bin/obsidian "$@"
+          EOF
+          sudo chmod +x /usr/local/bin/obsidian
+
+      - name: Wait for vault to be ready
+        run: |
+          echo "Waiting for vault ci-test-vault to be recognized..."
+          timeout 60 bash -c \
+            'until obsidian vault=ci-test-vault version 2>/dev/null | grep -q "[0-9]"; do sleep 5; done'
+          echo "Vault is ready"
+
+      - name: Run tests
+        env:
+          OBSIDIAN_VAULT: ci-test-vault
+        run: |
+          npm run test:unit
+          npm run test:integration
