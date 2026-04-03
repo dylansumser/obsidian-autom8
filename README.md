@@ -2,6 +2,7 @@
 
 ![CI](https://github.com/dylansumser/obsidian-autom8/actions/workflows/ci.yml/badge.svg)
 ![Release](https://img.shields.io/github/v/release/dylansumser/obsidian-autom8)
+![Image](https://ghcr-badge.egpl.dev/dylansumser/obsidian-autom8/size?tag=latest)
 ![License](https://img.shields.io/github/license/dylansumser/obsidian-autom8)
 
 `obsidian-autom8` makes it easy to give your agents remote access to your [Obsidian](https://obsidian.md) via the Model Context Protocol (MCP), built on top of the [linuxserver/docker-obsidian](https://github.com/linuxserver/docker-obsidian) image.
