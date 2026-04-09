@@ -1,8 +1,11 @@
 name: Build & Push
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
+  push:
     tags:
       - "v*"
 
@@ -14,6 +17,7 @@ jobs:
   docker:
     name: Build & push Docker image
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       packages: write
