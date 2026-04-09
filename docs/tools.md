@@ -37,8 +37,7 @@ All tools exposed by the MCP server and their equivalent Obsidian CLI commands.
 
 | MCP Tool | CLI Command | Description |
 |---|---|---|
-| `search_vault` | `search` | Search vault for text, returns matching file paths |
-| `search_vault_context` | `search:context` | Search with matching line context (grep-style output) |
+| `search_vault` | `search` / `search:context` | Search vault for text. Returns file paths by default; set `includeContext: true` for grep-style line matches |
 
 ## Tags & Properties
 
