@@ -4,92 +4,7 @@
 
 ## Architecture
 
-obsidian-autom8 layers two components on top of [`lscr.io/linuxserver/obsidian`](https://github.com/linuxserver/docker-obsidian): an MCP server and the Obsidian CLI. The MCP server is written in TypeScript, compiled to a single CJS bundle via esbuild, and registered as an s6-overlay service so it starts and restarts automatically alongside Obsidian.
-
-### Container architecture
-
-```mermaid
-graph TD
-    subgraph Container
-        direction TB
-        S6[s6-overlay supervisor]
-        OBS[Obsidian app]
-        MCP[MCP server\nNode.js / obsidian-autom8.cjs]
-        SOCK[Unix socket\n/config/.XDG/.obsidian-cli.sock]
-        CLI[obsidian CLI binary\n/config/.local/bin/obsidian]
-
-        S6 --> OBS
-        S6 --> MCP
-        OBS -- exposes --> SOCK
-        MCP -- shells out to --> CLI
-        CLI -- connects via --> SOCK
-    end
-
-    CLIENT[MCP client\ne.g. Claude Code] -- HTTP Bearer --> MCP
-```
-
-### Source code layout
-
-The TypeScript source is split into two layers:
-
-```mermaid
-graph LR
-    subgraph src/tools/
-        T1[notes.ts]
-        T2[search.ts]
-        T3[tags.ts]
-        TN[...etc]
-    end
-
-    subgraph src/app/
-        A1[notes.ts]
-        A2[search.ts]
-        A3[tags.ts]
-        AN[...etc]
-        EX[executor.ts]
-    end
-
-    T1 --> A1
-    T2 --> A2
-    T3 --> A3
-    TN --> AN
-    A1 & A2 & A3 & AN --> EX
-    EX -- shells out --> CLI2[obsidian CLI]
-```
-
-| Layer | Path | Responsibility |
-|---|---|---|
-| MCP adapter | `src/api/mcp/tools/` | Registers tools with the MCP SDK, validates inputs, calls into `src/app/` |
-| Business logic | `src/app/` | Builds CLI commands, parses output, owns domain types |
-| MCP utilities | `src/api/mcp/tools/utils.ts` | `text()` — wraps values in the MCP tool response envelope |
-| Entrypoint | `src/index.ts` | Starts the Fastify HTTP server and mounts the MCP router |
-| CLI executor | `src/app/executor.ts` | Shells out to the `obsidian` binary via a serial queue; lazily resolves vault path |
-
-### Request flow
-
-```mermaid
-sequenceDiagram
-    participant Client as MCP Client
-    participant Server as MCP Server (Fastify)
-    participant Tool as src/tools/*.ts
-    participant App as src/app/*.ts
-    participant Exec as executor.ts
-    participant CLI as obsidian CLI
-    participant Sock as IPC Socket
-
-    Client->>Server: HTTP POST /mcp (tool call)
-    Server->>Tool: route to registered tool handler
-    Tool->>App: call business logic function
-    App->>Exec: build + run CLI command
-    Exec->>CLI: spawn process
-    CLI->>Sock: connect to Obsidian IPC
-    Sock-->>CLI: response
-    CLI-->>Exec: stdout
-    Exec-->>App: parsed result
-    App-->>Tool: typed return value
-    Tool-->>Server: MCP tool response envelope
-    Server-->>Client: HTTP response
-```
+For a full breakdown of the container architecture, source code layout, and request flow, see [docs/architecture.md](docs/architecture.md).
 
 ---
 
@@ -159,56 +74,95 @@ This runs `tsc --noEmit` (type check) then esbuild to produce `dist/obsidian-aut
 
 ---
 
+## Git workflow
+
+This project uses a **stage-gated trunk-based model** with two long-lived branches:
+
+| Branch | Role | Protection |
+|---|---|---|
+| `dev` | Trunk — default branch, all development lands here | PR required; `check` + `test` must pass; squash merge only |
+| `main` | Release — only ever updated from `dev` | PR required; `check` + `test` must pass; merge commit only |
+
+```mermaid
+flowchart LR
+    F[feature/xyz] -->|PR + CI| D[dev]
+    D -->|release PR + CI| M[main]
+    M --> R[Docker release]
+```
+
+### For contributors
+
+1. **Fork the repo** and branch off `dev` — not `main`
+2. **Open a PR targeting `dev`** with a clear description of the change
+3. **CI must pass** (`check` + `test`) — the PR cannot merge until both jobs are green
+4. A maintainer will review and merge your PR once CI passes
+
+Keep PRs focused — one feature or fix per PR. If your change is large, consider opening a draft PR early to discuss the approach.
+
+### For maintainers
+
+**Day-to-day development:**
+
+1. Branch off `dev`:
+   ```bash
+   git checkout dev && git pull
+   git checkout -b feature/my-thing
+   ```
+2. Open a PR targeting `dev` and enable auto-merge:
+   ```bash
+   gh pr create --base dev
+   gh pr merge <number> --auto --squash
+   ```
+3. CI runs — the PR squash-merges into `dev` automatically when green
+
+**Releasing a new version:**
+
+1. Bump `version` in `package.json` on `dev` (via a feature PR or direct commit)
+2. Open a release PR from `dev` to `main`:
+   ```bash
+   gh pr create --base main --head dev --title "Release v$(node -p "require('./package.json').version")"
+   ```
+3. CI runs on the PR — merge it manually when ready to ship
+4. `release.yml` fires on merge, builds and publishes the Docker image and GitHub release
+
+> Versioned Docker images (`1.2.0`, `1.2`) and the GitHub release are only created if the version in `package.json` has no corresponding git tag yet — re-merging without a version bump only updates the `latest` and `main` tags.
+
 ## CI / CD
 
 ### GitHub Actions
 
 ```mermaid
 flowchart LR
-    PUSH[push to main] --> CI
+    PR[PR to dev or main] --> CI
 
     subgraph CI [ci.yml]
-        CHECK[Type check · Lint · Format · Build]
+        CHECK[Lint · Format · Build]
         TEST[Build Docker image\nStart Obsidian container\nRun tests]
         CHECK --> TEST
     end
 
-    subgraph Docker [docker.yml]
+    subgraph Release [release.yml]
         BLDPUSH[Build & push\nlatest · main]
         VERSION{new version\nin package.json?}
-        BLDPUSH_V[Build & push\nversioned image\ne.g. 1.1.1 · 1.1]
-        RELEASE[Create GitHub release\nauto-generated notes]
+        BLDPUSH_V[Build & push\nversioned image\ne.g. 1.2.0 · 1.2]
+        GHR[Create GitHub release\nauto-generated notes]
         BLDPUSH --> VERSION
-        VERSION -->|yes| BLDPUSH_V --> RELEASE
-        VERSION -->|no| DONE([no versioned release])
+        VERSION -->|yes| BLDPUSH_V --> GHR
+        VERSION -->|no| DONE([done])
     end
 
-    CI -->|passes| Docker
+    PR -->|merged to main| Release
 ```
 
-- **`ci.yml`** — type check, lint, format check, build, then the full test suite inside a live Obsidian container. The `test` job is gated on `check` passing.
-- **`docker.yml`** — triggers via `workflow_run` after CI passes on `main`. Always builds and pushes `latest` + `main`. If `package.json` version has no corresponding git tag yet, also builds versioned images (`1.1.1`, `1.1`), creates the git tag, and publishes a GitHub release with auto-generated notes.
+- **`ci.yml`** — lint, format check, build, then the full test suite inside a live Obsidian container. Triggers on push to `dev` and on PRs targeting `dev` or `main`. The `test` job is gated on `check` passing.
+- **`release.yml`** — triggers on push to `main`. Builds and pushes a multi-platform Docker image (`linux/amd64` + `linux/arm64`). If the version in `package.json` has no corresponding git tag, also builds versioned images, creates the git tag, and publishes a GitHub release with auto-generated notes.
 
-### Layer caching is shared
+### Layer caching
 
-Both workflows use `docker/build-push-action` with `cache-from: type=gha` and `cache-to: type=gha,mode=max`. They share the same default buildx cache scope, so layers written by `docker.yml` are available to `ci.yml`'s test job on the next run — and vice versa.
-
-### Releasing a new version
-
-Bump `version` in `package.json`, commit, and push to `main`. That's it — CI runs automatically, and once green the Docker workflow detects the new version and publishes the versioned image and GitHub release.
+Both workflows use `docker/build-push-action` with `cache-from: type=gha` and `cache-to: type=gha,mode=max`, sharing the same GHA cache scope — layers built by `release.yml` are available to `ci.yml`'s test job on the next run.
 
 ---
 
-## Roadmap & planned additions
+## Roadmap
 
-### Self-documenting REST API
-
-A structured HTTP API for deterministic, non-agent use cases. Unlike the MCP interface — which is designed for LLM tool-calling — the REST API will expose the same operations as predictable, typed endpoints suitable for direct integration with automation platforms, scripts, and workflows that don't involve an AI model in the loop. The API will be self-documenting via OpenAPI.
-
-### n8n custom node
-
-A native [n8n](https://n8n.io) node built on top of the REST API, allowing self-hosted n8n instances to read and write Obsidian vaults as first-class workflow steps — no HTTP Request node configuration required.
-
-### Bun migration (under consideration)
-
-We're evaluating a rewrite of the MCP server runtime from Node.js to [Bun](https://bun.sh). Bun can compile TypeScript to a self-contained executable with no external runtime dependency, which would eliminate the Node.js install step from the Dockerfile entirely. This would meaningfully reduce the final image size and simplify the build process. The API surface and source code structure would remain unchanged — it's a runtime swap, not a rewrite.
+See [docs/roadmap.md](docs/roadmap.md) for planned additions and work under consideration.
