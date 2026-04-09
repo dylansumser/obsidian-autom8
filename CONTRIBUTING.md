@@ -59,12 +59,11 @@ graph LR
 
 | Layer | Path | Responsibility |
 |---|---|---|
-| MCP adapter | `src/tools/` | Registers tools with the MCP SDK, validates inputs, calls into `src/app/` |
+| MCP adapter | `src/api/mcp/tools/` | Registers tools with the MCP SDK, validates inputs, calls into `src/app/` |
 | Business logic | `src/app/` | Builds CLI commands, parses output, owns domain types |
-| Shared utilities | `src/utils.ts` | `requireOneOf()` — validates that at least one of a set of named fields is present |
-| MCP utilities | `src/tools/utils.ts` | `text()` — wraps values in the MCP tool response envelope |
-| Entrypoint | `src/index.ts` | Starts the Fastify HTTP server and mounts the MCP and REST routers |
-| CLI executor | `src/app/executor.ts` | Single function that shells out to the `obsidian` binary and returns parsed output |
+| MCP utilities | `src/api/mcp/tools/utils.ts` | `text()` — wraps values in the MCP tool response envelope |
+| Entrypoint | `src/index.ts` | Starts the Fastify HTTP server and mounts the MCP router |
+| CLI executor | `src/app/executor.ts` | Shells out to the `obsidian` binary via a serial queue; lazily resolves vault path |
 
 ### Request flow
 
@@ -164,32 +163,51 @@ This runs `tsc --noEmit` (type check) then esbuild to produce `dist/obsidian-aut
 
 ### GitHub Actions
 
-Two workflows run on every push to `main`:
-
 ```mermaid
 flowchart LR
-    PUSH[push to main]
+    PUSH[push to main] --> CI
 
-    subgraph ci.yml
-        CHECK[Type check\nLint\nFormat\nBuild]
-        TEST[Build Docker image\nStart Obsidian container\nBootstrap CLI\nRun tests]
+    subgraph CI [ci.yml]
+        CHECK[Type check · Lint · Format · Build]
+        TEST[Build Docker image\nStart Obsidian container\nRun tests]
         CHECK --> TEST
     end
 
-    subgraph docker.yml
-        BLDPUSH[Build & push\nlinux/amd64 + linux/arm64\nghcr.io/dylansumser/obsidian-autom8]
+    subgraph Docker [docker.yml — main]
+        BLDPUSH[Build & push\nlinux/amd64 + arm64\nghcr.io — latest · main]
     end
 
-    PUSH --> ci.yml
-    PUSH --> docker.yml
+    subgraph Release [docker.yml — tag]
+        BLDPUSH_V[Build & push\nversioned image\ne.g. 1.1.1 · 1.1]
+        RELEASE[Create GitHub release\nauto-generated notes]
+        BLDPUSH_V --> RELEASE
+    end
+
+    CI -->|passes| BLDPUSH
+    TAG[push v* tag] --> BLDPUSH_V
 ```
 
-- **`ci.yml`** — runs type checking, linting, format check, and the full test suite. The `test` job is gated on `check` passing, so a type error skips the Docker build entirely.
-- **`docker.yml`** — builds the multi-platform image and pushes to GHCR. Both workflows share a GHA layer cache so Docker layers are reused between them.
+- **`ci.yml`** — type check, lint, format check, build, then the full test suite inside a live Obsidian container. The `test` job is gated on `check` passing.
+- **`docker.yml`** — two triggers:
+  - **`workflow_run` after CI passes on `main`** — builds and pushes the multi-platform image tagged `latest` and `main`.
+  - **`v*` tag push** — builds and pushes versioned images (e.g. `1.1.1`, `1.1`) and creates a GitHub release with auto-generated notes.
 
 ### Layer caching is shared
 
 Both workflows use `docker/build-push-action` with `cache-from: type=gha` and `cache-to: type=gha,mode=max`. They share the same default buildx cache scope, so layers written by `docker.yml` are available to `ci.yml`'s test job on the next run — and vice versa.
+
+### Releasing a new version
+
+1. Bump `version` in `package.json` and commit
+2. Push to `main` — CI runs automatically
+3. Once CI is green, create and push a semver tag:
+
+```bash
+git tag v1.1.1
+git push origin v1.1.1
+```
+
+The Docker workflow publishes the versioned image and creates the GitHub release automatically.
 
 ---
 
