@@ -1,5 +1,7 @@
 # obsidian-autom8
 
+<img src="logo.svg" alt="obsidian-autom8" width="120" />
+
 ![CI](https://github.com/dylansumser/obsidian-autom8/actions/workflows/ci.yml/badge.svg)
 ![Release](https://img.shields.io/github/v/release/dylansumser/obsidian-autom8)
 ![Image](https://ghcr-badge.egpl.dev/dylansumser/obsidian-autom8/size?tag=latest)
