@@ -13,6 +13,4 @@ context/
 test/ci-config/*
 !test/ci-config/obsidian.json
 test/ci-test-vault/*
-!test/ci-test-vault/.obsidian/
-test/ci-test-vault/.obsidian/bookmarks.json
-test/ci-test-vault/.obsidian/workspace.json
+!test/ci-test-vault/.gitkeep
