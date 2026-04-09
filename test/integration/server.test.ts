@@ -82,9 +82,9 @@ describe("tool registration", () => {
     await app.close();
   });
 
-  it("registers all 54 tools", async () => {
+  it("registers all 52 tools", async () => {
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(53);
+    expect(tools.length).toBe(52);
   });
 
   it("every tool has a name and description", async () => {
