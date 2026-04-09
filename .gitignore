@@ -4,6 +4,7 @@ dist/
 *.log
 .env
 test/test-vault/*
+!test/test-vault/.gitkeep
 .claude/
 .gemini/
 .mcp.json

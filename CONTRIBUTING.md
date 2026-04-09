@@ -100,7 +100,7 @@ sequenceDiagram
 - Node.js 24+
 - The [Obsidian](https://obsidian.md) desktop app installed and running locally
 - The Obsidian CLI enabled: **Settings → General → Command line interface** (this registers the `obsidian` binary at `~/.local/bin/obsidian` or equivalent)
-- A local vault to test against — the test suite defaults to a vault named `test-vault`
+- A local Obsidian vault for testing — open the `test/test-vault/` directory as a vault in Obsidian and keep it active while running tests
 
 ### Install dependencies
 
@@ -118,13 +118,13 @@ This starts the server using `tsx` (no build step needed). The server connects t
 
 ### Run tests locally
 
-**Unit tests** (no Obsidian required — mock executor):
+**Unit tests** (tests the app layer directly via the executor):
 
 ```bash
-npm run test:unit
+OBSIDIAN_VAULT=test-vault npm run test:unit
 ```
 
-**Integration tests** (requires Obsidian running with `test-vault` open):
+**Integration tests** (tests the full MCP server HTTP layer end-to-end):
 
 ```bash
 OBSIDIAN_VAULT=test-vault npm run test:integration
@@ -136,7 +136,7 @@ OBSIDIAN_VAULT=test-vault npm run test:integration
 OBSIDIAN_VAULT=test-vault npm test
 ```
 
-> The integration tests call the live Obsidian IPC socket. Obsidian must be open and the CLI must be enabled before running them. If the socket isn't available, the tests will time out.
+> Both test suites call the live Obsidian IPC socket. Obsidian must be open locally with `test/test-vault/` as the active vault, and the CLI must be enabled. If the socket isn't available, the tests will time out.
 
 ### Full CI pipeline locally
 
@@ -180,7 +180,7 @@ flowchart LR
         RELEASE[Create GitHub release\nauto-generated notes]
         BLDPUSH --> VERSION
         VERSION -->|yes| BLDPUSH_V --> RELEASE
-        VERSION -->|no| DONE[ ]
+        VERSION -->|no| DONE([no versioned release])
     end
 
     CI -->|passes| Docker

@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/obsidian-autom8.cjs",
   "scripts": {
-    "build": "tsc --noEmit && node esbuild.config.js",
+    "build": "tsc --noEmit && tsx esbuild.config.ts",
     "dev": "tsx src/index.ts --vault test-vault",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "vitest run",
