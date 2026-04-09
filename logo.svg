@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 256 256">
   <style>
     /* Core SVG Styling */
-    .purple { fill: #9974F8; }
+    .purple {
+      fill: #9974F8;
+      stroke: #000000;
+      stroke-width: 4;
+      stroke-linejoin: round;
+    }
 
     .bolt {
       fill: #FDE047; /* Bright Yellow */
@@ -12,7 +17,7 @@
 
     /* Dark Mode Adjustments */
     @media (prefers-color-scheme: dark) {
-      .purple { fill: #A88BFA; }
+      .purple { fill: #A88BFA; stroke: #171717; }
       .bolt {
         fill: #FEF08A; /* Slightly lighter yellow for dark mode */
         stroke: #171717; /* Very dark grey border for dark mode */

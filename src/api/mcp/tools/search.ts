@@ -4,8 +4,6 @@ import { text } from "./utils.js";
 import {
   searchVaultSchema,
   searchVault,
-  searchVaultContextSchema,
-  searchVaultContext,
   listFilesSchema,
   listFiles,
 } from "../../../app/search.js";
@@ -15,21 +13,10 @@ export function registerTools(server: McpServer, executor: ObsidianExecutor): vo
     "search_vault",
     {
       description:
-        "Search vault content for a text query. Returns matching file paths as a JSON array.",
+        "Search vault content for a text query. Returns matching file paths by default; set includeContext: true to return matching lines with line numbers (more expensive).",
       inputSchema: searchVaultSchema.shape,
     },
     async (input) => text(await searchVault(executor, input)),
-  );
-
-  server.registerTool(
-    "search_vault_context",
-    {
-      description:
-        "Search vault content and return matching lines with surrounding context. " +
-        "More expensive than search_vault but shows where matches appear.",
-      inputSchema: searchVaultContextSchema.shape,
-    },
-    async (input) => text(await searchVaultContext(executor, input)),
   );
 
   server.registerTool(
