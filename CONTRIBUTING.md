@@ -173,24 +173,21 @@ flowchart LR
         CHECK --> TEST
     end
 
-    subgraph Docker [docker.yml — main]
-        BLDPUSH[Build & push\nlinux/amd64 + arm64\nghcr.io — latest · main]
-    end
-
-    subgraph Release [docker.yml — tag]
+    subgraph Docker [docker.yml]
+        BLDPUSH[Build & push\nlatest · main]
+        VERSION{new version\nin package.json?}
         BLDPUSH_V[Build & push\nversioned image\ne.g. 1.1.1 · 1.1]
         RELEASE[Create GitHub release\nauto-generated notes]
-        BLDPUSH_V --> RELEASE
+        BLDPUSH --> VERSION
+        VERSION -->|yes| BLDPUSH_V --> RELEASE
+        VERSION -->|no| DONE[ ]
     end
 
-    CI -->|passes| BLDPUSH
-    TAG[push v* tag] --> BLDPUSH_V
+    CI -->|passes| Docker
 ```
 
 - **`ci.yml`** — type check, lint, format check, build, then the full test suite inside a live Obsidian container. The `test` job is gated on `check` passing.
-- **`docker.yml`** — two triggers:
-  - **`workflow_run` after CI passes on `main`** — builds and pushes the multi-platform image tagged `latest` and `main`.
-  - **`v*` tag push** — builds and pushes versioned images (e.g. `1.1.1`, `1.1`) and creates a GitHub release with auto-generated notes.
+- **`docker.yml`** — triggers via `workflow_run` after CI passes on `main`. Always builds and pushes `latest` + `main`. If `package.json` version has no corresponding git tag yet, also builds versioned images (`1.1.1`, `1.1`), creates the git tag, and publishes a GitHub release with auto-generated notes.
 
 ### Layer caching is shared
 
@@ -198,16 +195,7 @@ Both workflows use `docker/build-push-action` with `cache-from: type=gha` and `c
 
 ### Releasing a new version
 
-1. Bump `version` in `package.json` and commit
-2. Push to `main` — CI runs automatically
-3. Once CI is green, create and push a semver tag:
-
-```bash
-git tag v1.1.1
-git push origin v1.1.1
-```
-
-The Docker workflow publishes the versioned image and creates the GitHub release automatically.
+Bump `version` in `package.json`, commit, and push to `main`. That's it — CI runs automatically, and once green the Docker workflow detects the new version and publishes the versioned image and GitHub release.
 
 ---
 
