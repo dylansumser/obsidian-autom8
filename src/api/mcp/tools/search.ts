@@ -1,12 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ObsidianExecutor } from "../../../app/executor.js";
 import { text } from "./utils.js";
-import {
-  searchVaultSchema,
-  searchVault,
-  listFilesSchema,
-  listFiles,
-} from "../../../app/search.js";
+import { searchVaultSchema, searchVault, listFilesSchema, listFiles } from "../../../app/search.js";
 
 export function registerTools(server: McpServer, executor: ObsidianExecutor): void {
   server.registerTool(
