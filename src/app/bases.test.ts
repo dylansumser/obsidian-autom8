@@ -91,7 +91,7 @@ describe("bases", () => {
 
   describe("listBaseViews", () => {
     it("returns all view names and types", async () => {
-      const views = await listBaseViews(executor, { file: BASE_FILE });
+      const views = await listBaseViews(executor, { path: BASE_FILE });
       const names = views.map((v) => v.name);
       expect(names).toContain("All");
       expect(names).toContain("High Priority");
@@ -99,7 +99,7 @@ describe("bases", () => {
     });
 
     it("includes column order for each view", async () => {
-      const views = await listBaseViews(executor, { file: BASE_FILE });
+      const views = await listBaseViews(executor, { path: BASE_FILE });
       const allView = views.find((v) => v.name === "All");
       expect(allView?.columns).toContain("file.name");
       expect(allView?.columns).toContain("Status");
@@ -108,9 +108,7 @@ describe("bases", () => {
 
   describe("listBaseProperties", () => {
     it("returns declared properties with display names", async () => {
-      const { properties } = await listBaseProperties(executor, {
-        file: BASE_FILE,
-      });
+      const { properties } = await listBaseProperties(executor, { path: BASE_FILE });
       const keys = properties.map((p) => p.key);
       expect(keys).toContain("Status");
       expect(keys).toContain("Priority");
@@ -119,9 +117,7 @@ describe("bases", () => {
     });
 
     it("returns formulas (empty for this base)", async () => {
-      const { formulas } = await listBaseProperties(executor, {
-        file: BASE_FILE,
-      });
+      const { formulas } = await listBaseProperties(executor, { path: BASE_FILE });
       expect(Array.isArray(formulas)).toBe(true);
     });
   });
@@ -134,7 +130,7 @@ describe("bases", () => {
       created.push(name);
       await createTestNote(name, "# No status");
 
-      const rows = (await queryBase(executor, { file: BASE_FILE })) as Record<string, unknown>[];
+      const rows = (await queryBase(executor, { path: BASE_FILE })) as Record<string, unknown>[];
       expect(rows.some((r) => String(r["path"] ?? "").includes(name))).toBe(false);
     });
 
@@ -146,7 +142,7 @@ describe("bases", () => {
         Priority: "Low",
       });
 
-      const rows = (await queryBase(executor, { file: BASE_FILE })) as Record<string, unknown>[];
+      const rows = (await queryBase(executor, { path: BASE_FILE })) as Record<string, unknown>[];
       const match = rows.find((r) => String(r["path"] ?? "").includes(name));
       expect(match).toBeDefined();
       expect(match!["Status"]).toBe("Active");
@@ -158,7 +154,7 @@ describe("bases", () => {
       created.push(name);
       await createTestNote(name, "# Active no priority", { Status: "Active" });
 
-      const rows = (await queryBase(executor, { file: BASE_FILE })) as Record<string, unknown>[];
+      const rows = (await queryBase(executor, { path: BASE_FILE })) as Record<string, unknown>[];
       const match = rows.find((r) => String(r["path"] ?? "").includes(name));
       expect(match).toBeDefined();
       expect(match!["Priority"]).toBeNull();
@@ -177,7 +173,7 @@ describe("bases", () => {
       });
 
       const rows = (await queryBase(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         view: "High Priority",
       })) as Record<string, unknown>[];
       expect(rows.some((r) => String(r["path"] ?? "").includes(name))).toBe(false);
@@ -192,7 +188,7 @@ describe("bases", () => {
       });
 
       const rows = (await queryBase(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         view: "High Priority",
       })) as Record<string, unknown>[];
       const match = rows.find((r) => String(r["path"] ?? "").includes(name));
@@ -207,10 +203,10 @@ describe("bases", () => {
     it("injects Status=Active from global equality filter", async () => {
       const name = uniqueName();
       created.push(name);
-      await createBaseItem(executor, { file: BASE_FILE, name });
+      await createBaseItem(executor, { path: BASE_FILE, name });
 
       const status = await executor.run("property:read", {
-        file: name,
+        path: `${name}.md`,
         name: "Status",
       });
       expect(status).toBe("Active");
@@ -220,17 +216,17 @@ describe("bases", () => {
       const name = uniqueName();
       created.push(name);
       await createBaseItem(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         name,
         view: "High Priority",
       });
 
       const status = await executor.run("property:read", {
-        file: name,
+        path: `${name}.md`,
         name: "Status",
       });
       const priority = await executor.run("property:read", {
-        file: name,
+        path: `${name}.md`,
         name: "Priority",
       });
       expect(status).toBe("Active");
@@ -241,13 +237,13 @@ describe("bases", () => {
       const name = uniqueName();
       created.push(name);
       await createBaseItem(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         name,
         view: "High Priority",
       });
 
       const rows = (await queryBase(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         view: "High Priority",
       })) as Record<string, unknown>[];
       expect(rows.some((r) => String(r["path"] ?? "").includes(name))).toBe(true);
@@ -257,15 +253,15 @@ describe("bases", () => {
       const name = uniqueName();
       created.push(name);
       await createBaseItem(executor, {
-        file: BASE_FILE,
+        path: BASE_FILE,
         name,
         content: "# Created via base",
       });
 
-      const content = await executor.run("read", { file: name });
+      const content = await executor.run("read", { path: `${name}.md` });
       expect(content).toContain("Created via base");
       const status = await executor.run("property:read", {
-        file: name,
+        path: `${name}.md`,
         name: "Status",
       });
       expect(status).toBe("Active");
@@ -279,7 +275,7 @@ describe("bases", () => {
       const name = uniqueName();
       created.push(name);
       await expect(
-        createBaseItem(executor, { file: BASE_FILE, name, view: "Old Files" }),
+        createBaseItem(executor, { path: BASE_FILE, name, view: "Old Files" }),
       ).resolves.toBeUndefined();
     });
   });

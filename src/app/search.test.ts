@@ -7,7 +7,7 @@ describe("search", () => {
 
   beforeAll(async () => {
     await executor.run("create", {
-      name: noteName,
+      path: `${noteName}.md`,
       content: "# Search Fixture\n\nUnique phrase: xqzk9search.",
       overwrite: true,
     });

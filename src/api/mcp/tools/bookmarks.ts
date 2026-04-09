@@ -22,7 +22,7 @@ export function registerTools(server: McpServer, executor: ObsidianExecutor): vo
     "add_bookmark",
     {
       description:
-        "Add a note to bookmarks. Use path= with the exact filename e.g. 'My Note.md' — fuzzy name match is not supported by the bookmark command.",
+        "Add a note to bookmarks. Provide the exact file path e.g. 'My Note.md' or 'folder/note.md'.",
       inputSchema: addBookmarkSchema.shape,
     },
     async (input) => text(await addBookmark(executor, input)),

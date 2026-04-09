@@ -28,6 +28,7 @@ class ObsidianExecutor {
   private static instance: ObsidianExecutor;
   private tail: Promise<unknown> = Promise.resolve();
   private readonly defaultVault: string | undefined;
+  private vaultPath: string | undefined;
 
   private constructor(defaultVault?: string) {
     this.defaultVault = defaultVault;
@@ -40,16 +41,23 @@ class ObsidianExecutor {
     return ObsidianExecutor.instance;
   }
 
-  run(command: string, args: CliArgs = {}, vault?: string): Promise<string> {
-    const next = this.tail.then(() => this._exec(command, args, vault));
+  run(command: string, args: CliArgs = {}): Promise<string> {
+    const next = this.tail.then(() => this._exec(command, args));
     // errors must not break the chain, but are still propagated to the caller
     this.tail = next.catch(() => {});
     return next;
   }
 
-  async runJson(command: string, args: CliArgs = {}, vault?: string): Promise<unknown> {
+  /** Enqueue an arbitrary async operation into the serial queue. */
+  enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.tail.then(() => fn());
+    this.tail = next.catch(() => {});
+    return next;
+  }
+
+  async runJson(command: string, args: CliArgs = {}): Promise<unknown> {
     const enriched = JSON_FORMAT_SUPPORTED.has(command) ? { ...args, format: "json" } : args;
-    const out = await this.run(command, enriched, vault);
+    const out = await this.run(command, enriched);
     const lowerOut = out.toLowerCase();
     if (
       out === "" ||
@@ -68,8 +76,23 @@ class ObsidianExecutor {
     }
   }
 
-  private async _exec(command: string, args: CliArgs, vault?: string): Promise<string> {
-    const v = vault ?? this.defaultVault;
+  /** Lazily resolves and caches the vault's filesystem path.
+   * Checks OBSIDIAN_VAULT_PATH env var first (useful when the CLI runs inside
+   * a container but the MCP server accesses the filesystem on the host). */
+  async resolveVaultPath(): Promise<string> {
+    if (this.vaultPath) return this.vaultPath;
+    const envPath = process.env.OBSIDIAN_VAULT_PATH;
+    if (envPath) {
+      this.vaultPath = envPath;
+      return envPath;
+    }
+    const path = await this._exec("vault", { info: "path" });
+    this.vaultPath = path;
+    return path;
+  }
+
+  private async _exec(command: string, args: CliArgs): Promise<string> {
+    const v = this.defaultVault;
     const cliArgs: string[] = [];
 
     if (v) cliArgs.push(`vault=${v}`);

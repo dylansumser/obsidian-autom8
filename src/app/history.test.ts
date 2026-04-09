@@ -19,7 +19,7 @@ describe("history", () => {
 
   beforeAll(async () => {
     await executor.run("create", {
-      name: noteName,
+      path: `${noteName}.md`,
       content: "# History Fixture\n\nInitial content.",
       overwrite: true,
     });
@@ -46,7 +46,7 @@ describe("history", () => {
     it("returns version list or empty string for a note", async () => {
       let result: string;
       try {
-        result = await listNoteVersions(executor, { file: noteName });
+        result = await listNoteVersions(executor, { path: `${noteName}.md` });
       } catch {
         // File Recovery plugin not enabled — skip gracefully
         return;
@@ -59,7 +59,7 @@ describe("history", () => {
     it("reads version 1 or throws if no history", async () => {
       try {
         const result = await readNoteVersion(executor, {
-          file: noteName,
+          path: `${noteName}.md`,
           version: 1,
         });
         expect(typeof result).toBe("string");
@@ -72,7 +72,7 @@ describe("history", () => {
   describe("restoreNoteVersion", () => {
     it("restores version 1 or throws if no history", async () => {
       try {
-        await restoreNoteVersion(executor, { file: noteName, version: 1 });
+        await restoreNoteVersion(executor, { path: `${noteName}.md`, version: 1 });
       } catch {
         // No history available — acceptable
       }
@@ -84,7 +84,7 @@ describe("history", () => {
       // diff works without File Recovery — shows local vs sync versions
       let result: string;
       try {
-        result = await diffNote(executor, { file: noteName });
+        result = await diffNote(executor, { path: `${noteName}.md` });
       } catch {
         // No diff data — acceptable
         return;
@@ -95,7 +95,7 @@ describe("history", () => {
     it("accepts from/to version parameters", async () => {
       try {
         const result = await diffNote(executor, {
-          file: noteName,
+          path: `${noteName}.md`,
           from: 1,
           to: 2,
         });

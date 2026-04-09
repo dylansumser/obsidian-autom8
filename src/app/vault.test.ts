@@ -44,13 +44,15 @@ describe("vault", () => {
       created.push(name);
       await createTestNote(name, "# Info test");
 
-      const result = await getFileInfo(executor, { file: name });
+      const result = await getFileInfo(executor, { path: `${name}.md` });
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(0);
     });
 
     it("throws for a non-existent file", async () => {
-      await expect(getFileInfo(executor, { file: "nonexistent-file-xyz-abc" })).rejects.toThrow();
+      await expect(
+        getFileInfo(executor, { path: "nonexistent-file-xyz-abc.md" }),
+      ).rejects.toThrow();
     });
   });
 

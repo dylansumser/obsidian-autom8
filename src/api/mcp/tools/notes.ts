@@ -6,6 +6,8 @@ import {
   readNote,
   createNoteSchema,
   createNote,
+  editNoteSchema,
+  editNote,
   appendToNoteSchema,
   appendToNote,
   prependToNoteSchema,
@@ -27,7 +29,7 @@ export function registerTools(server: McpServer, executor: ObsidianExecutor): vo
     "read_note",
     {
       description:
-        "Read the full markdown content of a note. Use file= for fuzzy name match or path= for exact path.",
+        "Read a note by exact vault-relative path. Returns JSON with `properties` (parsed YAML frontmatter) and `content` (note body without frontmatter).",
       inputSchema: readNoteSchema.shape,
     },
     async (input) => text(await readNote(executor, input)),
@@ -37,12 +39,22 @@ export function registerTools(server: McpServer, executor: ObsidianExecutor): vo
     "create_note",
     {
       description:
-        "Create a new note. Provide properties to auto-generate YAML frontmatter. " +
-        "Use name= for a simple filename or path= for a specific location. " +
-        "If path= includes folders that do not exist, they will be created automatically.",
+        "Create a new note at the given path. Provide properties to auto-generate YAML frontmatter. " +
+        "Intermediate folders are created automatically.",
       inputSchema: createNoteSchema.shape,
     },
     async (input) => text(await createNote(executor, input)),
+  );
+
+  server.registerTool(
+    "edit_note",
+    {
+      description:
+        "Replace an exact block of text in a note. Provide old_string (the exact text to replace) and new_string (the replacement). " +
+        "Replaces the first occurrence only. Throws if old_string is not found.",
+      inputSchema: editNoteSchema.shape,
+    },
+    async (input) => text(await editNote(executor, input)),
   );
 
   server.registerTool(

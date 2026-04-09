@@ -13,7 +13,7 @@ describe("properties", () => {
       tags: ["a", "b"],
     });
     await executor.run("create", {
-      name: noteName,
+      path: `${noteName}.md`,
       content: `${fm}\n\n# Body`,
       overwrite: true,
     });
@@ -30,7 +30,7 @@ describe("properties", () => {
     });
 
     it("returns properties for a specific file", async () => {
-      const result = await listProperties(executor, { file: noteName });
+      const result = await listProperties(executor, { path: `${noteName}.md` });
       const str = JSON.stringify(result);
       expect(str).toContain("status");
     });
@@ -39,7 +39,7 @@ describe("properties", () => {
   describe("getProperty", () => {
     it("reads a string property", async () => {
       const result = await getProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "status",
       });
       expect(result).toBe("draft");
@@ -47,7 +47,7 @@ describe("properties", () => {
 
     it("reads a numeric property", async () => {
       const result = await getProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "count",
       });
       expect(result).toBe("3");
@@ -57,12 +57,12 @@ describe("properties", () => {
   describe("setProperty", () => {
     it("updates an existing property", async () => {
       await setProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "status",
         value: "published",
       });
       const result = await getProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "status",
       });
       expect(result).toBe("published");
@@ -70,12 +70,12 @@ describe("properties", () => {
 
     it("creates a new property", async () => {
       await setProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "author",
         value: "test-agent",
       });
       const result = await getProperty(executor, {
-        file: noteName,
+        path: `${noteName}.md`,
         name: "author",
       });
       expect(result).toBe("test-agent");
@@ -84,8 +84,10 @@ describe("properties", () => {
 
   describe("removeProperty", () => {
     it("removes a property from a note", async () => {
-      await removeProperty(executor, { file: noteName, name: "status" });
-      await expect(getProperty(executor, { file: noteName, name: "status" })).rejects.toThrow();
+      await removeProperty(executor, { path: `${noteName}.md`, name: "status" });
+      await expect(
+        getProperty(executor, { path: `${noteName}.md`, name: "status" }),
+      ).rejects.toThrow();
     });
   });
 });

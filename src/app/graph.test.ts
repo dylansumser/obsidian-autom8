@@ -24,7 +24,7 @@ describe("graph", () => {
       await createTestNote(noteA, `# A\n\nLinks to [[${noteB}]].`);
       await createTestNote(noteB, "# B");
 
-      const result = await getNoteLinks(executor, { file: noteA });
+      const result = await getNoteLinks(executor, { path: `${noteA}.md` });
       expect(typeof result).toBe("string");
     });
 
@@ -33,7 +33,7 @@ describe("graph", () => {
       created.push(name);
       await createTestNote(name, "# No links here.");
 
-      const result = await getNoteLinks(executor, { file: name });
+      const result = await getNoteLinks(executor, { path: `${name}.md` });
       expect(typeof result).toBe("string");
     });
   });
@@ -47,7 +47,7 @@ describe("graph", () => {
       await createTestNote(noteB, "# B");
       await createTestNote(noteA, `# A\n\nLinks to [[${noteB}]].`);
 
-      const result = await getNoteBacklinks(executor, { file: noteB });
+      const result = await getNoteBacklinks(executor, { path: `${noteB}.md` });
       expect(Array.isArray(result) || typeof result === "string").toBe(true);
     });
   });

@@ -4,6 +4,7 @@ import { buildFrontmatter } from "../../test/setup.js";
 import {
   readNote,
   createNote,
+  editNote,
   appendToNote,
   prependToNote,
   deleteNote,
@@ -25,17 +26,38 @@ describe("notes", () => {
       const name = uniqueName();
       created.push(name);
       await createNote(executor, {
-        name,
+        path: `${name}.md`,
         content: "# Hello\n\nSome content.",
-        overwrite: true,
       });
-      const result = await readNote(executor, { file: name });
-      expect(result).toContain("# Hello");
-      expect(result).toContain("Some content.");
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.content).toContain("# Hello");
+      expect(result.content).toContain("Some content.");
+    });
+
+    it("returns empty properties when note has no frontmatter", async () => {
+      const name = uniqueName();
+      created.push(name);
+      await createNote(executor, { path: `${name}.md`, content: "# Plain" });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.properties).toEqual({});
+      expect(result.content).toContain("# Plain");
+    });
+
+    it("parses YAML frontmatter into properties", async () => {
+      const name = uniqueName();
+      created.push(name);
+      await createNote(executor, {
+        path: `${name}.md`,
+        content: "# Body",
+        properties: { status: "active", priority: 1 },
+      });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.properties).toMatchObject({ status: "active", priority: 1 });
+      expect(result.content).toContain("# Body");
     });
 
     it("throws when note does not exist", async () => {
-      await expect(readNote(executor, { file: "nonexistent-note-xyz-abc" })).rejects.toThrow();
+      await expect(readNote(executor, { path: "nonexistent-note-xyz-abc.md" })).rejects.toThrow();
     });
   });
 
@@ -43,24 +65,22 @@ describe("notes", () => {
     it("creates a plain note", async () => {
       const name = uniqueName();
       created.push(name);
-      await createNote(executor, { name, content: "# Plain", overwrite: true });
-      const content = await readNote(executor, { file: name });
-      expect(content).toContain("# Plain");
+      await createNote(executor, { path: `${name}.md`, content: "# Plain" });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.content).toContain("# Plain");
     });
 
     it("creates a note with frontmatter via properties", async () => {
       const name = uniqueName();
       created.push(name);
       await createNote(executor, {
-        name,
+        path: `${name}.md`,
         content: "# Body",
         properties: { status: "active", priority: 1, tags: ["work", "mcp"] },
-        overwrite: true,
       });
 
-      const content = await readNote(executor, { file: name });
-      expect(content).toContain("status: active");
-      expect(content).toContain("priority: 1");
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.properties).toMatchObject({ status: "active", priority: 1 });
     });
 
     it("creates a note with frontmatter via buildFrontmatter", async () => {
@@ -72,32 +92,57 @@ describe("notes", () => {
         tags: ["work", "mcp"],
       });
       await createNote(executor, {
-        name,
+        path: `${name}.md`,
         content: `${fm}\n\n# Body`,
-        overwrite: true,
       });
 
-      const content = await readNote(executor, { file: name });
-      expect(content).toContain("status: active");
-      expect(content).toContain("priority: 1");
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.properties).toMatchObject({ status: "active", priority: 1 });
+    });
+  });
+
+  describe("editNote", () => {
+    it("replaces a block of text in a note", async () => {
+      const name = uniqueName();
+      created.push(name);
+      await createNote(executor, { path: `${name}.md`, content: "# Hello\n\nOriginal content." });
+      await editNote(executor, {
+        path: `${name}.md`,
+        old_string: "Original content.",
+        new_string: "Replaced content.",
+      });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.content).toContain("Replaced content.");
+      expect(result.content).not.toContain("Original content.");
     });
 
-    it("overwrites an existing note when overwrite=true", async () => {
+    it("throws when old_string is not found", async () => {
+      const name = uniqueName();
+      created.push(name);
+      await createNote(executor, { path: `${name}.md`, content: "# Hello" });
+      await expect(
+        editNote(executor, {
+          path: `${name}.md`,
+          old_string: "This text does not exist.",
+          new_string: "Replacement.",
+        }),
+      ).rejects.toThrow("old_string not found");
+    });
+
+    it("throws when old_string matches multiple occurrences", async () => {
       const name = uniqueName();
       created.push(name);
       await createNote(executor, {
-        name,
-        content: "# Original",
-        overwrite: true,
+        path: `${name}.md`,
+        content: "repeat repeat repeat",
       });
-      await createNote(executor, {
-        name,
-        content: "# Replaced",
-        overwrite: true,
-      });
-      const result = await readNote(executor, { file: name });
-      expect(result).toContain("# Replaced");
-      expect(result).not.toContain("# Original");
+      await expect(
+        editNote(executor, {
+          path: `${name}.md`,
+          old_string: "repeat",
+          new_string: "REPLACED",
+        }),
+      ).rejects.toThrow("matches 3 occurrences");
     });
   });
 
@@ -105,11 +150,11 @@ describe("notes", () => {
     it("appends content to a note", async () => {
       const name = uniqueName();
       created.push(name);
-      await createNote(executor, { name, content: "# Note", overwrite: true });
-      await appendToNote(executor, { file: name, content: "Appended line." });
-      const result = await readNote(executor, { file: name });
-      expect(result).toContain("# Note");
-      expect(result).toContain("Appended line.");
+      await createNote(executor, { path: `${name}.md`, content: "# Note" });
+      await appendToNote(executor, { path: `${name}.md`, content: "Appended line." });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.content).toContain("# Note");
+      expect(result.content).toContain("Appended line.");
     });
   });
 
@@ -117,23 +162,19 @@ describe("notes", () => {
     it("prepends content to a note", async () => {
       const name = uniqueName();
       created.push(name);
-      await createNote(executor, { name, content: "# Note", overwrite: true });
-      await prependToNote(executor, { file: name, content: "Prepended line." });
-      const result = await readNote(executor, { file: name });
-      expect(result).toContain("Prepended line.");
+      await createNote(executor, { path: `${name}.md`, content: "# Note" });
+      await prependToNote(executor, { path: `${name}.md`, content: "Prepended line." });
+      const result = await readNote(executor, { path: `${name}.md` });
+      expect(result.content).toContain("Prepended line.");
     });
   });
 
   describe("deleteNote", () => {
     it("deletes a note permanently", async () => {
       const name = uniqueName();
-      await createNote(executor, {
-        name,
-        content: "# To delete",
-        overwrite: true,
-      });
-      await deleteNote(executor, { file: name, permanent: true });
-      await expect(readNote(executor, { file: name })).rejects.toThrow();
+      await createNote(executor, { path: `${name}.md`, content: "# To delete" });
+      await deleteNote(executor, { path: `${name}.md`, permanent: true });
+      await expect(readNote(executor, { path: `${name}.md` })).rejects.toThrow();
     });
   });
 
@@ -143,12 +184,8 @@ describe("notes", () => {
       const newName = uniqueName("moved");
       const destination = `${newName}.md`;
       created.push(newName);
-      await createNote(executor, {
-        name,
-        content: "# To move",
-        overwrite: true,
-      });
-      await moveNote(executor, { file: name, destination });
+      await createNote(executor, { path: `${name}.md`, content: "# To move" });
+      await moveNote(executor, { path: `${name}.md`, destination });
     });
   });
 
@@ -157,14 +194,10 @@ describe("notes", () => {
       const name = uniqueName();
       const newName = uniqueName("renamed");
       created.push(newName);
-      await createNote(executor, {
-        name,
-        content: "# To rename",
-        overwrite: true,
-      });
-      await renameNote(executor, { file: name, name: newName });
-      const result = await readNote(executor, { file: newName });
-      expect(result).toContain("# To rename");
+      await createNote(executor, { path: `${name}.md`, content: "# To rename" });
+      await renameNote(executor, { path: `${name}.md`, name: newName });
+      const result = await readNote(executor, { path: `${newName}.md` });
+      expect(result.content).toContain("# To rename");
     });
   });
 
@@ -173,11 +206,10 @@ describe("notes", () => {
       const name = uniqueName();
       created.push(name);
       await createNote(executor, {
-        name,
+        path: `${name}.md`,
         content: "# Heading 1\n\n## Heading 2\n\nsome text",
-        overwrite: true,
       });
-      const result = await getNoteOutline(executor, { file: name });
+      const result = await getNoteOutline(executor, { path: `${name}.md` });
       const str = JSON.stringify(result);
       expect(str).toContain("Heading 1");
     });
@@ -188,11 +220,10 @@ describe("notes", () => {
       const name = uniqueName();
       created.push(name);
       await createNote(executor, {
-        name,
+        path: `${name}.md`,
         content: "one two three four five",
-        overwrite: true,
       });
-      const result = await getNoteWordcount(executor, { file: name });
+      const result = await getNoteWordcount(executor, { path: `${name}.md` });
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(0);
     });

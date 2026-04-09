@@ -107,6 +107,7 @@ jobs:
       - name: Run tests
         env:
           OBSIDIAN_VAULT: ci-test-vault
+          OBSIDIAN_VAULT_PATH: ${{ github.workspace }}/test/ci-test-vault
         run: |
           npm run test:unit
           npm run test:integration

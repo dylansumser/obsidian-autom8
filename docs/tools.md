@@ -11,21 +11,27 @@ All tools exposed by the MCP server and their equivalent Obsidian CLI commands.
 | `list_vaults` | `vaults` | List all vaults registered with Obsidian |
 | `get_vault_info` | `vault` | Show info about the current vault (name, path, file/folder counts) |
 
+## Notes
+
+| MCP Tool | CLI Command | Description |
+|---|---|---|
+| `create_note` | `create` | Create a note at an exact path, optionally from a template |
+| `read_note` | `read` | Read a note — returns `{ properties, content }` (parsed frontmatter + body) |
+| `edit_note` | *(fs direct)* | Replace a unique block of text in a note (`old_string` → `new_string`); errors if `old_string` matches 0 or 2+ times — expand context to disambiguate |
+| `append_to_note` | `append` | Append content to a note |
+| `prepend_to_note` | `prepend` | Prepend content after frontmatter |
+| `delete_note` | `delete` | Delete a note (trash by default) |
+| `move_note` | `move` | Move a note to a new path, updating internal links |
+| `rename_note` | `rename` | Rename a note, updating internal links |
+
 ## Files & Folders
 
 | MCP Tool | CLI Command | Description |
 |---|---|---|
 | `list_files` | `files` | List files in the vault, optionally filtered by folder or extension |
-| `list_folders` | `folders` | List folders in the vault |
 | `get_file_info` | `file` | Get metadata for a file (size, created, modified) |
+| `list_folders` | `folders` | List folders in the vault |
 | `get_folder_info` | `folder` | Get info about a folder |
-| `create_note` | `create` | Create or overwrite a note, optionally from a template |
-| `read_note` | `read` | Read the contents of a note |
-| `append_to_note` | `append` | Append content to a note |
-| `prepend_to_note` | `prepend` | Prepend content after frontmatter |
-| `delete_note` | `delete` | Delete a note (trash by default) |
-| `move_note` | `move` | Move or rename a note, updating internal links |
-| `rename_note` | `rename` | Rename a note, updating internal links |
 
 ## Search
 

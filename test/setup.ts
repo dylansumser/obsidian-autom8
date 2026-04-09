@@ -20,12 +20,12 @@ export async function createTestNote(
   if (properties && Object.keys(properties).length > 0) {
     fullContent = `${buildFrontmatter(properties)}\n\n${content}`;
   }
-  await executor.run("create", { name, content: fullContent, overwrite: true });
+  await executor.run("create", { path: `${name}.md`, content: fullContent, overwrite: true });
 }
 
 export async function deleteTestNote(name: string): Promise<void> {
   try {
-    await executor.run("delete", { file: name, permanent: true });
+    await executor.run("delete", { path: `${name}.md`, permanent: true });
   } catch {
     // already gone — ignore
   }

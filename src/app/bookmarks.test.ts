@@ -23,7 +23,7 @@ describe("bookmarks", () => {
       await createTestNote(name, "# Bookmark me");
 
       try {
-        await addBookmark(executor, { file: name });
+        await addBookmark(executor, { path: `${name}.md` });
       } catch {
         // Bookmarks plugin may not be enabled in test vault — skip gracefully
       }

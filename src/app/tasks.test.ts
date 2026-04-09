@@ -7,7 +7,7 @@ describe("tasks", () => {
 
   beforeAll(async () => {
     await executor.run("create", {
-      name: noteName,
+      path: `${noteName}.md`,
       content: [
         "# Tasks",
         "",
@@ -25,20 +25,20 @@ describe("tasks", () => {
 
   describe("listTasks", () => {
     it("returns a JSON array of tasks", async () => {
-      const result = await listTasks(executor, { file: noteName });
+      const result = await listTasks(executor, { path: `${noteName}.md` });
       expect(Array.isArray(result)).toBe(true);
       expect((result as unknown[]).length).toBeGreaterThan(0);
     });
 
     it("filters to only incomplete tasks", async () => {
-      const result = await listTasks(executor, { file: noteName, todo: true });
+      const result = await listTasks(executor, { path: `${noteName}.md`, todo: true });
       expect(Array.isArray(result)).toBe(true);
       const str = JSON.stringify(result);
       expect(str).not.toContain('"done":true');
     });
 
     it("filters to only completed tasks", async () => {
-      const result = await listTasks(executor, { file: noteName, done: true });
+      const result = await listTasks(executor, { path: `${noteName}.md`, done: true });
       expect(Array.isArray(result)).toBe(true);
       expect((result as unknown[]).length).toBeGreaterThan(0);
     });
@@ -46,20 +46,20 @@ describe("tasks", () => {
 
   describe("toggleTask", () => {
     it("toggles a task's completion state", async () => {
-      const before = await listTasks(executor, { file: noteName });
+      const before = await listTasks(executor, { path: `${noteName}.md` });
       const tasks = before as { line?: number; done?: boolean }[];
       const incomplete = tasks.find((t) => !t.done);
       if (!incomplete?.line) return;
 
-      await toggleTask(executor, { file: noteName, line: incomplete.line });
-      const after = await listTasks(executor, { file: noteName, done: true });
+      await toggleTask(executor, { path: `${noteName}.md`, line: incomplete.line });
+      const after = await listTasks(executor, { path: `${noteName}.md`, done: true });
       expect(Array.isArray(after)).toBe(true);
     });
   });
 
   describe("setTaskStatus", () => {
     it("sets a custom status character on a task", async () => {
-      const tasks = (await listTasks(executor, { file: noteName })) as {
+      const tasks = (await listTasks(executor, { path: `${noteName}.md` })) as {
         line?: number;
       }[];
       const task = tasks.find((t) => t.line !== undefined);
@@ -67,7 +67,7 @@ describe("tasks", () => {
 
       await expect(
         setTaskStatus(executor, {
-          file: noteName,
+          path: `${noteName}.md`,
           line: task.line,
           status: "/",
         }),

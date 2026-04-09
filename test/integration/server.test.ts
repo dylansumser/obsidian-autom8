@@ -84,7 +84,7 @@ describe("tool registration", () => {
 
   it("registers all 54 tools", async () => {
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(52);
+    expect(tools.length).toBe(53);
   });
 
   it("every tool has a name and description", async () => {

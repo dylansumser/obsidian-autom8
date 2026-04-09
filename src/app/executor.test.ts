@@ -16,7 +16,7 @@ describe("ObsidianExecutor", () => {
     expect(result).toMatch(/\d+\.\d+/);
   });
 
-  it("passes vault targeting correctly", async () => {
+  it("targets the configured vault", async () => {
     const result = await executor.run("vault", { info: "name" });
     expect(result).toBe(TEST_VAULT);
   });
@@ -26,7 +26,7 @@ describe("ObsidianExecutor", () => {
     created.push(...names);
 
     const results = await Promise.all(
-      names.map((name) => executor.run("create", { name, content: `# ${name}`, overwrite: true })),
+      names.map((name) => executor.run("create", { path: `${name}.md`, content: `# ${name}` })),
     );
 
     expect(results).toHaveLength(3);
@@ -37,9 +37,8 @@ describe("ObsidianExecutor", () => {
     const name = uniqueName();
     created.push(name);
     await executor.run("create", {
-      name,
+      path: `${name}.md`,
       content: "---\ntags: [mcp-test]\n---\n# Tagged",
-      overwrite: true,
     });
     const result = await executor.runJson("tags");
     expect(Array.isArray(result)).toBe(true);
@@ -51,8 +50,8 @@ describe("ObsidianExecutor", () => {
   it("returns raw string when output is not JSON", async () => {
     const name = uniqueName();
     created.push(name);
-    await executor.run("create", { name, content: "# Hello", overwrite: true });
-    const result = await executor.runJson("read", { file: name });
+    await executor.run("create", { path: `${name}.md`, content: "# Hello" });
+    const result = await executor.runJson("read", { path: `${name}.md` });
     expect(typeof result).toBe("string");
     expect(result).toContain("Hello");
   });
@@ -65,5 +64,11 @@ describe("ObsidianExecutor", () => {
     await expect(executor.run("nonexistent-command")).rejects.toThrow();
     const result = await executor.run("version");
     expect(result).toMatch(/\d+\.\d+/);
+  });
+
+  it("resolves vault path via CLI", async () => {
+    const vaultPath = await executor.resolveVaultPath();
+    expect(typeof vaultPath).toBe("string");
+    expect(vaultPath.length).toBeGreaterThan(0);
   });
 });

@@ -15,7 +15,7 @@ describe("tags", () => {
       created.push(name);
       await createTestNote(name, "# Tagged\n\n#test-mcp-tag");
 
-      const result = await listTags(executor, { file: name });
+      const result = await listTags(executor, { path: `${name}.md` });
       expect(Array.isArray(result) || typeof result === "object").toBe(true);
     });
   });
