@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { executor, uniqueName, deleteTestNote } from "../../test/setup.js";
-import { searchVault, searchVaultContext, listFiles } from "./search.js";
+import { searchVault, listFiles } from "./search.js";
 
 describe("search", () => {
   const noteName = uniqueName("search-fixture");
@@ -32,10 +32,11 @@ describe("search", () => {
     });
   });
 
-  describe("searchVaultContext", () => {
+  describe("searchVault with includeContext", () => {
     it("returns context for matching query", async () => {
-      const result = await searchVaultContext(executor, {
+      const result = await searchVault(executor, {
         query: "xqzk9search",
+        includeContext: true,
       });
       const str = JSON.stringify(result);
       expect(str).toContain("xqzk9search");

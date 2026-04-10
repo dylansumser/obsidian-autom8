@@ -6,13 +6,12 @@ export const searchVaultSchema = z.object({
   folder: z.string().optional().describe("Limit search to this folder path"),
   limit: z.number().optional().describe("Maximum number of results"),
   caseSensitive: z.boolean().optional().describe("Case-sensitive search"),
-});
-
-export const searchVaultContextSchema = z.object({
-  query: z.string().describe("Search query"),
-  folder: z.string().optional().describe("Limit search to this folder path"),
-  limit: z.number().optional().describe("Maximum number of results"),
-  caseSensitive: z.boolean().optional().describe("Case-sensitive search"),
+  includeContext: z
+    .boolean()
+    .optional()
+    .describe(
+      "Return matching lines with line numbers instead of file paths. More expensive. Defaults to false.",
+    ),
 });
 
 /** File paths matching the search query. */
@@ -38,7 +37,16 @@ export const listFilesSchema = z.object({
 export async function searchVault(
   executor: ObsidianExecutor,
   input: z.infer<typeof searchVaultSchema>,
-): Promise<SearchResult[]> {
+): Promise<SearchResult[] | SearchContextResult[]> {
+  if (input.includeContext) {
+    const raw = await executor.runJson("search:context", {
+      query: input.query,
+      path: input.folder,
+      limit: input.limit,
+      case: input.caseSensitive,
+    });
+    return z.array(searchContextResultSchema).parse(raw);
+  }
   const raw = await executor.runJson("search", {
     query: input.query,
     path: input.folder,
@@ -46,19 +54,6 @@ export async function searchVault(
     case: input.caseSensitive,
   });
   return z.array(searchResultSchema).parse(Array.isArray(raw) ? raw : []);
-}
-
-export async function searchVaultContext(
-  executor: ObsidianExecutor,
-  input: z.infer<typeof searchVaultContextSchema>,
-): Promise<SearchContextResult[]> {
-  const raw = await executor.runJson("search:context", {
-    query: input.query,
-    path: input.folder,
-    limit: input.limit,
-    case: input.caseSensitive,
-  });
-  return z.array(searchContextResultSchema).parse(raw);
 }
 
 export async function listFiles(

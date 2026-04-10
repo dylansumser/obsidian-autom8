@@ -9,7 +9,7 @@
 
 `obsidian-autom8` makes it easy to give your agents remote access to your [Obsidian](https://obsidian.md) via the Model Context Protocol (MCP), built on top of the [linuxserver/docker-obsidian](https://github.com/linuxserver/docker-obsidian) image.
 
-→ [Full MCP tools reference](docs/tools.md) · [Architecture, contributing & roadmap](CONTRIBUTING.md)
+→ [Full MCP tools reference](docs/tools.md) · [Architecture](docs/architecture.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
 > **Security note:** similarly to the [linuxserver/docker-obsidian](https://github.com/linuxserver/docker-obsidian) base image, this container has no HTTPS support and should not be exposed to an unsecured network. For secure deployments, place it behind a reverse proxy (e.g. Caddy, Nginx Proxy Manager, Traefik) that handles TLS termination.
 
