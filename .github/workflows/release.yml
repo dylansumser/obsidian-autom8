@@ -3,13 +3,27 @@ name: Release
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  validate:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Require dev branch
+        if: github.head_ref != 'dev'
+        run: |
+          echo "::error::Release PRs must come from the 'dev' branch (got '${{ github.head_ref }}')"
+          exit 1
+
   docker:
+    if: github.event_name == 'push'
     name: Build & push Docker image
     runs-on: ubuntu-latest
     permissions:

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-autom8",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Self-contained Obsidian + MCP server Docker image for agent and automation use",
   "type": "module",
   "main": "dist/obsidian-autom8.cjs",
