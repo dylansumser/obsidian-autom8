@@ -21,6 +21,7 @@ COPY --from=builder /build/dist/obsidian-autom8.cjs /app/obsidian-autom8.cjs
 RUN mkdir -p /etc/s6-overlay/s6-rc.d/svc-obsidian-autom8/dependencies.d \
   && mkdir -p /etc/s6-overlay/s6-rc.d/user/contents.d \
   && echo "longrun" > /etc/s6-overlay/s6-rc.d/svc-obsidian-autom8/type \
+  && touch /etc/s6-overlay/s6-rc.d/svc-obsidian-autom8/dependencies.d/init-services \
   && touch /etc/s6-overlay/s6-rc.d/user/contents.d/svc-obsidian-autom8 \
   && printf '#!/usr/bin/with-contenv sh\nexec s6-setuidgid abc node /app/obsidian-autom8.cjs --port "${MCP_PORT:-3002}"\n' \
      > /etc/s6-overlay/s6-rc.d/svc-obsidian-autom8/run \
